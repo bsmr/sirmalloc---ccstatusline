@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /home/bsmr/repositories/github.com/sirmalloc/ccstatusline && go build ./... && go vet ./...",
+            "timeout": 60,
+            "statusMessage": "Checking Go build..."
+          }
+        ]
+      }
+    ]
+  }
+}
