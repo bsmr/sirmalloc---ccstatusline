@@ -128,39 +128,41 @@ type VimInfo struct {
 
 ```go
 type Widget interface {
-    Render(input *StatusInput, cfg WidgetConfig) string
+    Render(input *StatusInput, item WidgetItem) string
 }
 ```
 
 ## Widget List
 
+All widget type strings are kebab-case.
+
 | Widget type | Source | Notes |
 |-------------|--------|-------|
 | `model` | `input.Model.DisplayName` | RawValue: value only, no label |
-| `gitBranch` | `git branch --show-current` | via `os/exec`, 2s timeout, `Cmd.Dir = cwd` |
-| `gitChanges` | `git diff --numstat` | counts insertions + deletions |
-| `gitWorktree` | `git worktree list` | active worktree name |
-| `sessionClock` | `input.Cost.TotalDurationMs` | format: `2hr 15m` |
-| `sessionCost` | `input.Cost.TotalCostUSD` | format: `$1.23` |
-| `blockTimer` | transcript JSONL parse | elapsed time in 5h block |
+| `git-branch` | `git branch --show-current` | via `os/exec`, 2s timeout, `Cmd.Dir = cwd` |
+| `git-changes` | `git diff --numstat` | counts insertions + deletions |
+| `git-worktree` | `git worktree list` | active worktree name |
+| `session-clock` | `input.Cost.TotalDurationMs` | format: `2hr 15m` |
+| `session-cost` | `input.Cost.TotalCostUSD` | format: `$1.23` |
+| `block-timer` | transcript JSONL parse | elapsed time in 5h block |
 | `cwd` | `input.Workspace.CurrentDir` | configurable segment count, fish-style abbreviation |
 | `version` | `input.Version` | |
-| `outputStyle` | `input.OutputStyle.Name` | |
-| `tokensInput` | `input.ContextWindow.TotalInputTokens` | formatted: `15.2k` |
-| `tokensOutput` | `input.ContextWindow.TotalOutputTokens` | |
-| `tokensCached` | `CurrentUsage.CacheReadInputTokens` | |
-| `tokensTotal` | input + output | |
-| `contextLength` | `input.ContextWindow.ContextWindowSize` | |
-| `contextPct` | `input.ContextWindow.UsedPercentage` | toggle: used/remaining |
-| `contextPctUsable` | 80% of max (auto-compact boundary) | 1M models → 800k, else 160k |
-| `rateLimitFiveHour` | `input.RateLimits.FiveHour.UsedPercentage` | shows resets_at on hover if supported |
-| `rateLimitSevenDay` | `input.RateLimits.SevenDay.UsedPercentage` | |
-| `vimMode` | `input.Vim.Mode` | only rendered when non-empty |
-| `terminalWidth` | `golang.org/x/term` | debugging widget |
-| `customText` | static text from config | emoji supported |
-| `customCommand` | shell command (no `sh -c`) | JSON forwarded to stdin |
+| `output-style` | `input.OutputStyle.Name` | |
+| `tokens-input` | `input.ContextWindow.TotalInputTokens` | formatted: `15.2k` |
+| `tokens-output` | `input.ContextWindow.TotalOutputTokens` | |
+| `tokens-cached` | `CurrentUsage.CacheReadInputTokens` | |
+| `tokens-total` | input + output | |
+| `context-length` | `input.ContextWindow.ContextWindowSize` | |
+| `context-percentage` | `input.ContextWindow.UsedPercentage` | toggle: used/remaining via `remaining` field |
+| `context-pct-usable` | 80% of max (auto-compact boundary) | 1M models → 800k, else 160k |
+| `rate-limit-five-hour` | `input.RateLimits.FiveHour.UsedPercentage` | shows resets_at on hover if supported |
+| `rate-limit-seven-day` | `input.RateLimits.SevenDay.UsedPercentage` | |
+| `vim-mode` | `input.Vim.Mode` | only rendered when non-empty |
+| `terminal-width` | `golang.org/x/term` | debugging widget |
+| `custom-text` | static text from config | emoji supported |
+| `custom-command` | shell command (no `sh -c`) | JSON forwarded to stdin |
 | `separator` | configurable character | `\|`, `-`, `,`, space |
-| `flexSeparator` | fills available space | used for right-alignment |
+| `flex-separator` | fills available space | used for right-alignment |
 
 ## Model Context Detection
 
@@ -202,28 +204,29 @@ func formatDuration(ms int64) string {
 
 Path: `~/.config/ccstatusline/settings.json`
 
-Must remain JSON-compatible with the TypeScript original for seamless migration.
+JSON-compatible with the TypeScript original (version 3 format).
 
 ```go
 type Settings struct {
-    Lines         []LineConfig     `json:"lines"`
-    GlobalOptions GlobalOptions    `json:"globalOptions"`
-    Powerline     *PowerlineConfig `json:"powerline,omitempty"`
-    TerminalWidth string           `json:"terminalWidth"` // "full", "full-minus-40", "full-until-compact"
-    ColorMode     string           `json:"colorMode"`     // "basic", "256", "truecolor"
+    Version                int              `json:"version"`
+    Lines                  [][]WidgetItem   `json:"lines"`
+    FlexMode               string           `json:"flexMode"`   // "full", "full-minus-40", "full-until-compact"
+    CompactThreshold       int              `json:"compactThreshold"`
+    ColorLevel             int              `json:"colorLevel"` // 0=basic, 1=256, 2=truecolor
+    InheritSeparatorColors bool             `json:"inheritSeparatorColors"`
+    GlobalBold             bool             `json:"globalBold"`
+    Powerline              *PowerlineConfig `json:"powerline,omitempty"`
 }
 
-type LineConfig struct {
-    Widgets []WidgetConfig `json:"widgets"`
-}
-
-type WidgetConfig struct {
-    Type      string `json:"type"`
-    FG        string `json:"fg"`
-    BG        string `json:"bg"`
-    Bold      bool   `json:"bold"`
-    RawValue  bool   `json:"rawValue"`
-    Merge     bool   `json:"merge"`
+type WidgetItem struct {
+    ID        string `json:"id"`
+    Type      string `json:"type"`       // kebab-case: see widget type table below
+    Color     string `json:"color,omitempty"`
+    FG        string `json:"fg,omitempty"`
+    BG        string `json:"bg,omitempty"`
+    Bold      bool   `json:"bold,omitempty"`
+    RawValue  bool   `json:"rawValue,omitempty"`
+    Merge     bool   `json:"merge,omitempty"`
     // widget-specific:
     Text      string `json:"text,omitempty"`
     Command   string `json:"command,omitempty"`
@@ -236,21 +239,45 @@ type WidgetConfig struct {
     SepChar   string `json:"sepChar,omitempty"`
 }
 
-type GlobalOptions struct {
-    DefaultPadding   int    `json:"defaultPadding"`
-    DefaultSeparator string `json:"defaultSeparator"`
-    InheritColors    bool   `json:"inheritColors"`
-    GlobalBold       bool   `json:"globalBold"`
-    OverrideFG       string `json:"overrideFG,omitempty"`
-    OverrideBG       string `json:"overrideBG,omitempty"`
-}
-
 type PowerlineConfig struct {
-    Enabled   bool   `json:"enabled"`
-    SepChar   string `json:"sepChar"`   // default: U+E0B0
-    CapLeft   string `json:"capLeft"`
-    CapRight  string `json:"capRight"`
-    AutoAlign bool   `json:"autoAlign"`
+    Enabled                   bool     `json:"enabled"`
+    Separators                []string `json:"separators"`
+    SeparatorInvertBackground []bool   `json:"separatorInvertBackground"`
+    StartCaps                 []string `json:"startCaps"`
+    EndCaps                   []string `json:"endCaps"`
+    AutoAlign                 bool     `json:"autoAlign"`
+}
+```
+
+Example `settings.json`:
+
+```json
+{
+  "version": 3,
+  "lines": [
+    [
+      {"id": "1", "type": "model", "color": "cyan"},
+      {"id": "2", "type": "separator"},
+      {"id": "3", "type": "context-percentage"},
+      {"id": "4", "type": "separator"},
+      {"id": "5", "type": "session-cost"},
+      {"id": "6", "type": "separator"},
+      {"id": "7", "type": "session-clock"}
+    ]
+  ],
+  "flexMode": "full-minus-40",
+  "compactThreshold": 60,
+  "colorLevel": 2,
+  "inheritSeparatorColors": false,
+  "globalBold": false,
+  "powerline": {
+    "enabled": false,
+    "separators": ["\ue0b0"],
+    "separatorInvertBackground": [false],
+    "startCaps": [],
+    "endCaps": [],
+    "autoAlign": false
+  }
 }
 ```
 
