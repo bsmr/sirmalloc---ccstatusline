@@ -27,7 +27,9 @@ func Run(_ context.Context, stdout, _ io.Writer) error {
 
 	termWidth, _, _ := term.GetSize(int(os.Stdout.Fd()))
 	if termWidth <= 0 {
-		termWidth = 80
+		// Not a terminal (piped by Claude Code or test). Use a wide default
+		// so truncation does not activate — effective width depends on flexMode.
+		termWidth = 220
 	}
 
 	lines := render.Render(si, cfg, termWidth)

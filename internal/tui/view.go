@@ -25,6 +25,10 @@ func (m model) View() string {
 		m.viewWidget(&b)
 	case screenTypeSelect:
 		m.viewTypeSelect(&b)
+	case screenGlobalOptions:
+		m.viewGlobalOptions(&b)
+	case screenPowerline:
+		m.viewPowerline(&b)
 	}
 	b.WriteString("\n")
 	if m.statusMsg != "" {
@@ -39,7 +43,7 @@ func (m model) View() string {
 func (m model) hints() string {
 	switch m.screen {
 	case screenLines:
-		return "j/k navigate · Enter open · a add · d delete · Ctrl+S save · q quit"
+		return "j/k navigate · Enter open · a add · d delete · g global opts · p powerline · Ctrl+S save · q quit"
 	case screenLine:
 		return "j/k navigate · Enter edit · a add · d delete · Ctrl+S save · Esc back"
 	case screenWidget:
@@ -49,6 +53,16 @@ func (m model) hints() string {
 		return "j/k navigate · Enter/Space toggle · Ctrl+S save+back · Esc back"
 	case screenTypeSelect:
 		return "j/k navigate · Enter select · Esc cancel"
+	case screenGlobalOptions:
+		if m.editingText {
+			return "type · Enter/Esc confirm"
+		}
+		return "j/k navigate · Enter/Space toggle · Ctrl+S save+back · Esc/q back"
+	case screenPowerline:
+		if m.editingText {
+			return "type · Enter/Esc confirm"
+		}
+		return "j/k navigate · Enter/Space toggle · Ctrl+S save+back · Esc/q back"
 	}
 	return ""
 }
@@ -164,6 +178,42 @@ func (m model) viewTypeSelect(b *strings.Builder) {
 			b.WriteString(styleSelected.Render("> "+t) + "\n")
 		} else {
 			b.WriteString("  " + t + "\n")
+		}
+	}
+}
+
+func (m model) viewGlobalOptions(b *strings.Builder) {
+	b.WriteString("Global Options\n\n")
+	for i, label := range globalFieldLabels {
+		val := getGlobalField(m.settings, i)
+		var entry string
+		if i == m.fieldCursor && m.editingText {
+			entry = fmt.Sprintf("%-24s  %s_", label, m.textBuf)
+		} else {
+			entry = fmt.Sprintf("%-24s  %s", label, val)
+		}
+		if i == m.fieldCursor {
+			b.WriteString(styleSelected.Render("> "+entry) + "\n")
+		} else {
+			b.WriteString("  " + entry + "\n")
+		}
+	}
+}
+
+func (m model) viewPowerline(b *strings.Builder) {
+	b.WriteString("Powerline\n\n")
+	for i, label := range powerlineFieldLabels {
+		val := getPowerlineField(m.settings, i)
+		var entry string
+		if i == m.fieldCursor && m.editingText {
+			entry = fmt.Sprintf("%-12s  %s_", label, m.textBuf)
+		} else {
+			entry = fmt.Sprintf("%-12s  %s", label, val)
+		}
+		if i == m.fieldCursor {
+			b.WriteString(styleSelected.Render("> "+entry) + "\n")
+		} else {
+			b.WriteString("  " + entry + "\n")
 		}
 	}
 }

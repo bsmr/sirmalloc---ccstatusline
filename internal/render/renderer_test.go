@@ -44,7 +44,9 @@ func TestRenderDefaultSettings(t *testing.T) {
 	si := exampleInput()
 	cfg := config.DefaultSettings()
 
-	lines := render.Render(si, cfg, 80)
+	// Use a wide terminal (200) so "full-minus-40" still leaves 160 chars —
+	// enough that the output is never truncated for this test input.
+	lines := render.Render(si, cfg, 200)
 
 	if len(lines) == 0 {
 		t.Fatal("Render returned no lines")
@@ -73,7 +75,7 @@ func TestRenderNilFields(t *testing.T) {
 	si := &input.StatusInput{}
 	cfg := config.DefaultSettings()
 
-	lines := render.Render(si, cfg, 80)
+	lines := render.Render(si, cfg, 200)
 	if lines == nil {
 		t.Fatal("Render returned nil")
 	}

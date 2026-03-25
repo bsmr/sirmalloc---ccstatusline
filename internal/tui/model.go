@@ -16,6 +16,8 @@ const (
 	screenLine
 	screenWidget
 	screenTypeSelect
+	screenGlobalOptions
+	screenPowerline
 )
 
 // allWidgetTypes lists all widget types available for addition.
@@ -219,6 +221,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateWidget(key)
 	case screenTypeSelect:
 		return m.updateTypeSelect(key)
+	case screenGlobalOptions:
+		return m.updateGlobalOptions(key)
+	case screenPowerline:
+		return m.updatePowerline(key)
 	}
 	return m, nil
 }
@@ -293,6 +299,12 @@ func (m model) updateLines(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 		} else {
 			m.statusMsg = "cannot delete the last line"
 		}
+	case "g":
+		m.screen = screenGlobalOptions
+		m.fieldCursor = 0
+	case "p":
+		m.screen = screenPowerline
+		m.fieldCursor = 0
 	case "ctrl+s":
 		m = m.save()
 	}
@@ -430,6 +442,275 @@ func (m model) updateTypeSelect(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 		)
 		m.widgetsCursor = len(m.settings.Lines[m.linesCursor]) - 1
 		m.screen = screenLine
+	}
+	return m, nil
+}
+
+// ---------------------------------------------------------------------------
+// Global Options helpers
+// ---------------------------------------------------------------------------
+
+const globalFieldCount = 5
+
+func isGlobalFieldText(idx int) bool {
+	return idx < 3 // 0=flexMode, 1=colorLevel, 2=compactThreshold are text; 3,4 are bool
+}
+
+func getGlobalField(s *config.Settings, idx int) string {
+	switch idx {
+	case 0:
+		return s.FlexMode
+	case 1:
+		return strconv.Itoa(s.ColorLevel)
+	case 2:
+		return strconv.Itoa(s.CompactThreshold)
+	case 3:
+		if s.GlobalBold {
+			return "true"
+		}
+		return "false"
+	case 4:
+		if s.InheritSeparatorColors {
+			return "true"
+		}
+		return "false"
+	}
+	return ""
+}
+
+func setGlobalField(s *config.Settings, idx int, val string) {
+	switch idx {
+	case 0:
+		s.FlexMode = val
+	case 1:
+		if n, err := strconv.Atoi(val); err == nil {
+			s.ColorLevel = n
+		}
+	case 2:
+		if n, err := strconv.Atoi(val); err == nil {
+			s.CompactThreshold = n
+		}
+	case 3:
+		s.GlobalBold = val == "true"
+	case 4:
+		s.InheritSeparatorColors = val == "true"
+	}
+}
+
+func toggleGlobalField(s *config.Settings, idx int) {
+	switch idx {
+	case 3:
+		s.GlobalBold = !s.GlobalBold
+	case 4:
+		s.InheritSeparatorColors = !s.InheritSeparatorColors
+	}
+}
+
+var globalFieldLabels = [globalFieldCount]string{
+	"flexMode",
+	"colorLevel",
+	"compactThreshold",
+	"globalBold",
+	"inheritSeparatorColors",
+}
+
+func (m model) updateGlobalOptions(key tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.editingText {
+		switch key.String() {
+		case "enter", "esc":
+			setGlobalField(m.settings, m.fieldCursor, m.textBuf)
+			m.editingText = false
+		case "backspace":
+			if len(m.textBuf) > 0 {
+				runes := []rune(m.textBuf)
+				m.textBuf = string(runes[:len(runes)-1])
+			}
+		default:
+			s := key.String()
+			if len([]rune(s)) == 1 {
+				m.textBuf += s
+			}
+		}
+		return m, nil
+	}
+
+	switch key.String() {
+	case "ctrl+c":
+		return m, tea.Quit
+	case "esc", "q":
+		m.screen = screenLines
+		m.fieldCursor = 0
+	case "j", "down", "tab":
+		m.fieldCursor++
+		if m.fieldCursor >= globalFieldCount {
+			m.fieldCursor = 0
+		}
+	case "k", "up":
+		m.fieldCursor--
+		if m.fieldCursor < 0 {
+			m.fieldCursor = globalFieldCount - 1
+		}
+	case "enter", " ":
+		if isGlobalFieldText(m.fieldCursor) {
+			m.textBuf = getGlobalField(m.settings, m.fieldCursor)
+			m.editingText = true
+		} else {
+			toggleGlobalField(m.settings, m.fieldCursor)
+		}
+	case "ctrl+s":
+		m = m.save()
+		m.screen = screenLines
+	}
+	return m, nil
+}
+
+// ---------------------------------------------------------------------------
+// Powerline helpers
+// ---------------------------------------------------------------------------
+
+const powerlineFieldCount = 5
+
+func isPowerlineFieldText(idx int) bool {
+	// 0=enabled(bool), 1=separator(text), 2=startCap(text), 3=endCap(text), 4=autoAlign(bool)
+	return idx >= 1 && idx <= 3
+}
+
+func getPowerlineField(s *config.Settings, idx int) string {
+	if s.Powerline == nil {
+		switch idx {
+		case 0:
+			return "false"
+		case 4:
+			return "false"
+		}
+		return ""
+	}
+	switch idx {
+	case 0:
+		if s.Powerline.Enabled {
+			return "true"
+		}
+		return "false"
+	case 1:
+		if len(s.Powerline.Separators) > 0 {
+			return s.Powerline.Separators[0]
+		}
+		return ""
+	case 2:
+		if len(s.Powerline.StartCaps) > 0 {
+			return s.Powerline.StartCaps[0]
+		}
+		return ""
+	case 3:
+		if len(s.Powerline.EndCaps) > 0 {
+			return s.Powerline.EndCaps[0]
+		}
+		return ""
+	case 4:
+		if s.Powerline.AutoAlign {
+			return "true"
+		}
+		return "false"
+	}
+	return ""
+}
+
+func setPowerlineField(s *config.Settings, idx int, val string) {
+	if s.Powerline == nil {
+		s.Powerline = &config.PowerlineConfig{}
+	}
+	switch idx {
+	case 0:
+		s.Powerline.Enabled = val == "true"
+	case 1:
+		if len(s.Powerline.Separators) == 0 {
+			s.Powerline.Separators = []string{val}
+		} else {
+			s.Powerline.Separators[0] = val
+		}
+	case 2:
+		if len(s.Powerline.StartCaps) == 0 {
+			s.Powerline.StartCaps = []string{val}
+		} else {
+			s.Powerline.StartCaps[0] = val
+		}
+	case 3:
+		if len(s.Powerline.EndCaps) == 0 {
+			s.Powerline.EndCaps = []string{val}
+		} else {
+			s.Powerline.EndCaps[0] = val
+		}
+	case 4:
+		s.Powerline.AutoAlign = val == "true"
+	}
+}
+
+func togglePowerlineField(s *config.Settings, idx int) {
+	if s.Powerline == nil {
+		s.Powerline = &config.PowerlineConfig{}
+	}
+	switch idx {
+	case 0:
+		s.Powerline.Enabled = !s.Powerline.Enabled
+	case 4:
+		s.Powerline.AutoAlign = !s.Powerline.AutoAlign
+	}
+}
+
+var powerlineFieldLabels = [powerlineFieldCount]string{
+	"enabled",
+	"separator",
+	"startCap",
+	"endCap",
+	"autoAlign",
+}
+
+func (m model) updatePowerline(key tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.editingText {
+		switch key.String() {
+		case "enter", "esc":
+			setPowerlineField(m.settings, m.fieldCursor, m.textBuf)
+			m.editingText = false
+		case "backspace":
+			if len(m.textBuf) > 0 {
+				runes := []rune(m.textBuf)
+				m.textBuf = string(runes[:len(runes)-1])
+			}
+		default:
+			s := key.String()
+			if len([]rune(s)) == 1 {
+				m.textBuf += s
+			}
+		}
+		return m, nil
+	}
+
+	switch key.String() {
+	case "ctrl+c":
+		return m, tea.Quit
+	case "esc", "q":
+		m.screen = screenLines
+		m.fieldCursor = 0
+	case "j", "down", "tab":
+		m.fieldCursor++
+		if m.fieldCursor >= powerlineFieldCount {
+			m.fieldCursor = 0
+		}
+	case "k", "up":
+		m.fieldCursor--
+		if m.fieldCursor < 0 {
+			m.fieldCursor = powerlineFieldCount - 1
+		}
+	case "enter", " ":
+		if isPowerlineFieldText(m.fieldCursor) {
+			m.textBuf = getPowerlineField(m.settings, m.fieldCursor)
+			m.editingText = true
+		} else {
+			togglePowerlineField(m.settings, m.fieldCursor)
+		}
+	case "ctrl+s":
+		m = m.save()
+		m.screen = screenLines
 	}
 	return m, nil
 }
