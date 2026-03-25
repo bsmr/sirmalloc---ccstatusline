@@ -10,54 +10,53 @@
 6. `internal/config/settings.go` — `Settings`/`WidgetItem` structs, `Load()`/`Save()` (atomic)
 7. Smoke test: `cat testdata/example_input.json | go run ./cmd/ccstatusline`
 
-## Phase 1.5: TUI Skeleton — view & edit existing widgets
+## Phase 1.5: TUI Skeleton — view & edit existing widgets ✅ DONE
 
 Goal: after this phase `ccstatusline-setup` shows the current config and allows
 editing all Phase-1 widgets. No new renderer features.
 
-8. Add Bubble Tea + Lip Gloss to `go.mod` (`cmd/ccstatusline-setup` only)
-9. Main screen: list of lines ([][]WidgetItem), navigate with j/k
-10. Line screen: list of widgets in the selected line, navigate with j/k
-11. Widget screen: edit color/fg/bg/bold for the selected widget
-12. Widget-type-specific options for Phase-1 widgets:
-    - `separator`: SepChar
-    - `context-percentage`: Remaining toggle
-13. Add widget (type selection list), remove widget (d), reorder (not required yet)
-14. Save with Ctrl+S (atomic write via `config.Save()`)
-15. Quit with q/Esc from top level
+8. Add Bubble Tea + Lip Gloss to `go.mod` (`cmd/ccstatusline-setup` only) ✅
+9. Main screen: list of lines ([][]WidgetItem), navigate with j/k ✅
+10. Line screen: list of widgets in the selected line, navigate with j/k ✅
+11. Widget screen: edit color/fg/bg/bold for the selected widget ✅
+12. Widget-type-specific options for Phase-1 widgets ✅
+13. Add widget (type selection list), remove widget (d) ✅
+14. Save with Ctrl+S (atomic write via `config.Save()`) ✅
+15. Quit with q/Esc from top level ✅
 
-## Phase 2: All Widgets (renderer + TUI editor page per widget)
+## Phase 2: All Widgets (renderer + TUI editor page per widget) ✅ DONE
 
-For each new widget: implement renderer side AND TUI config page in the same step.
+All widgets implemented. TUI supports all widget types via `fieldsFor()`.
 
-16. `git-branch` — `os/exec`, 2s timeout, `Cmd.Dir` validation (R-7)
-17. `git-worktree` — same exec pattern
-18. `cwd` — path display, fish-style, segments
-19. `version` — static from `StatusInput`
-20. `output-style` — pass-through
-21. `tokens-in`, `tokens-out`, `tokens-total` — from `StatusInput`
-22. `context-length` — from `StatusInput.Model`
-23. `context-pct-usable` — derived from tokens + model limit
-24. `rate-limit-five-hour`, `rate-limit-seven-day` — from `StatusInput.RateLimits`
-25. `vim-mode` — from `StatusInput.Vim`
-26. `terminal-width` — from termWidth parameter
-27. `custom-text` — static, `item.Text`
-28. `custom-command` — `exec.Command(path, args...)`, no `sh -c` (R-1), timeout
-29. `block-timer` — JSONL parsing, cache in `~/.cache/ccstatusline/`
+16. `git-branch` — `os/exec`, 2s timeout, `Cmd.Dir` validation ✅
+17. `git-worktree` — same exec pattern ✅
+18. `cwd` — path display, fish-style, segments ✅
+19. `version` — static from `StatusInput` ✅
+20. `output-style` — pass-through ✅
+21. `tokens-in`, `tokens-out`, `tokens-total` — from `StatusInput` ✅
+22. `context-length` — from `StatusInput.Model` ✅
+23. `context-pct-usable` — derived from tokens + model limit ✅
+24. `rate-limit-five-hour`, `rate-limit-seven-day` — from `StatusInput.RateLimits` ✅
+25. `vim-mode` — from `StatusInput.Vim` ✅
+26. `terminal-width` — from termWidth parameter ✅
+27. `custom-text` — static, `item.Text` ✅
+28. `custom-command` — `exec.Command(path, args...)`, no `sh -c` (R-1), timeout ✅
+29. `block-timer` — JSONL parsing, cache in `~/.cache/ccstatusline/` ✅
 
-## Phase 3: Settings & Powerline (renderer + TUI screens)
+## Phase 3: Settings & Powerline (renderer + TUI screens) ✅ DONE
 
-30. Powerline rendering, separators, caps (renderer)
-31. Flex separator, auto-alignment (renderer)
-32. Terminal width modes and ANSI/OSC-aware truncation (renderer)
-33. TUI: Powerline setup screen
-34. TUI: Global options screen (flexMode, colorLevel, compactThreshold, globalBold)
+30. Powerline rendering, separators, caps (renderer) ✅
+31. Flex separator, ANSI/OSC-aware truncation (renderer) ✅
+32. Terminal width modes (`full`, `full-minus-40`, `full-until-compact`) ✅
+33. TUI: Powerline setup screen (enabled, separator, caps, autoAlign, theme) ✅
+34. TUI: Global options screen (flexMode, colorLevel, compactThreshold, globalBold) ✅
+35. Powerline theme system: 11 built-in themes × 3 color levels ✅
 
-## Phase 4: TUI Polish & Integration
+## Phase 4: TUI Polish & Integration ✅ DONE
 
-35. Live preview (render current config with last known input)
-36. Install/Uninstall in Claude Code settings (`~/.claude/settings.json`)
-37. Color picker: Basic / 256 / Truecolor selection
+36. Live preview (render current config with synthetic input) ✅
+37. Install/Uninstall in Claude Code settings (`~/.claude/settings.json`) ✅
+38. Color picker: Basic color selection (8 named colors) ✅
 
 ## Phase 5: Polish
 
