@@ -8,6 +8,15 @@ import (
 	"go.a8l.eu/ccstatusline/internal/widgets"
 )
 
+// NormalizeBGColor converts TypeScript-style "bgCyan" to the canonical "cyan"
+// used by render.BG(). Returns the input unchanged if it does not start with "bg".
+func NormalizeBGColor(s string) string {
+	if strings.HasPrefix(s, "bg") && len(s) > 2 {
+		return strings.ToLower(s[2:])
+	}
+	return s
+}
+
 const linePad = " "
 
 // widgetSlot holds the rendered output for a single widget position in a line.
@@ -123,8 +132,13 @@ func slotsToSegments(slots []widgetSlot, cfg *config.Settings) []segment {
 
 // applyColors wraps val with ANSI color/bold codes derived from item and global
 // settings. Returns val unchanged when no styling is configured.
+// BG takes priority over BackgroundColor; BackgroundColor is the fallback.
 func applyColors(val string, item config.WidgetItem, cfg *config.Settings) string {
-	prefix := FG(item.FG) + BG(item.BG)
+	bgColor := item.BG
+	if bgColor == "" && item.BackgroundColor != "" {
+		bgColor = NormalizeBGColor(item.BackgroundColor)
+	}
+	prefix := FG(item.FG) + BG(bgColor)
 	if item.Bold || cfg.GlobalBold {
 		prefix += Bold()
 	}

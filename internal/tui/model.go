@@ -34,6 +34,9 @@ var allWidgetTypes = []string{
 	"context-percentage",
 	"context-pct-usable",
 	"context-length",
+	"context-bar",
+	"reset-timer",
+	"session-usage",
 	"session-clock",
 	"session-cost",
 	"block-timer",
@@ -67,6 +70,7 @@ func fieldsFor(w *config.WidgetItem) []widgetField {
 		{"fg", true},
 		{"bg", true},
 		{"bold", false},
+		{"backgroundColor", true},
 	}
 	switch w.Type {
 	case "separator":
@@ -85,6 +89,9 @@ func fieldsFor(w *config.WidgetItem) []widgetField {
 		fields = append(fields, widgetField{"hideNoGit", false})
 	case "block-timer":
 		fields = append(fields, widgetField{"barMode", true})
+	case "context-bar", "session-usage", "reset-timer":
+		// display mode is in metadata["display"] — edit as text
+		fields = append(fields, widgetField{"metadata.display", true})
 	}
 	return fields
 }
@@ -134,6 +141,13 @@ func getField(w *config.WidgetItem, idx int) string {
 		return strconv.Itoa(w.Timeout)
 	case "barMode":
 		return w.BarMode
+	case "backgroundColor":
+		return w.BackgroundColor
+	case "metadata.display":
+		if w.Metadata == nil {
+			return ""
+		}
+		return w.Metadata["display"]
 	}
 	return ""
 }
@@ -172,6 +186,13 @@ func setField(w *config.WidgetItem, idx int, val string) {
 		}
 	case "barMode":
 		w.BarMode = val
+	case "backgroundColor":
+		w.BackgroundColor = val
+	case "metadata.display":
+		if w.Metadata == nil {
+			w.Metadata = make(map[string]string)
+		}
+		w.Metadata["display"] = val
 	}
 }
 

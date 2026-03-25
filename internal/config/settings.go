@@ -34,9 +34,11 @@ type WidgetItem struct {
 	Segments  int    `json:"segments,omitempty"`
 	FishStyle bool   `json:"fishStyle,omitempty"`
 	HideNoGit bool   `json:"hideNoGit,omitempty"`
-	Remaining bool   `json:"remaining,omitempty"`
-	BarMode   string `json:"barMode,omitempty"`
-	SepChar   string `json:"sepChar,omitempty"`
+	Remaining       bool              `json:"remaining,omitempty"`
+	BarMode         string            `json:"barMode,omitempty"`
+	SepChar         string            `json:"sepChar,omitempty"`
+	BackgroundColor string            `json:"backgroundColor,omitempty"` // e.g. "bgCyan", "bgWhite"
+	Metadata        map[string]string `json:"metadata,omitempty"`         // widget-specific options
 }
 
 type PowerlineConfig struct {

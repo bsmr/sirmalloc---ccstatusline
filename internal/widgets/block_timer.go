@@ -127,61 +127,72 @@ func parseBlockStart(transcriptPath string) (time.Time, error) {
 	return blockStart, nil
 }
 
-func (blockTimerWidget) Render(si *input.StatusInput, item config.WidgetItem) string {
+// getBlockStart returns the start of the current 5-hour block for the given StatusInput.
+// It handles path validation (R-2), session ID validation (R-3), and caching.
+func getBlockStart(si *input.StatusInput) (time.Time, error) {
 	if si == nil {
-		return ""
+		return time.Time{}, fmt.Errorf("nil StatusInput")
 	}
 
 	transcriptPath := si.TranscriptPath
 	if transcriptPath == "" {
-		return ""
+		return time.Time{}, fmt.Errorf("empty transcript path")
 	}
 
 	// Security R-2: validate transcript path is absolute and under home dir.
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return ""
+		return time.Time{}, err
 	}
 	clean := filepath.Clean(transcriptPath)
 	if !filepath.IsAbs(clean) {
-		return ""
+		return time.Time{}, fmt.Errorf("transcript path not absolute")
 	}
 	if !strings.HasPrefix(clean, home+string(filepath.Separator)) {
-		return ""
+		return time.Time{}, fmt.Errorf("transcript path escapes home dir")
 	}
 
 	// Security R-3: validate session_id before using as filename part.
 	if si.SessionID != "" && !sessionIDRe.MatchString(si.SessionID) {
-		return ""
+		return time.Time{}, fmt.Errorf("invalid session_id")
 	}
 
 	configDir := filepath.Dir(transcriptPath)
 	cachePath, err := blockCachePath(configDir)
 	if err != nil {
-		return ""
+		return time.Time{}, err
 	}
 
 	var blockStart time.Time
 
 	// Try cache first.
 	if cached := loadBlockCache(cachePath); cached != nil && cached.TranscriptPath == transcriptPath {
-		t, err := time.Parse(time.RFC3339, cached.BlockStart)
-		if err == nil {
+		t, parseErr := time.Parse(time.RFC3339, cached.BlockStart)
+		if parseErr == nil {
 			blockStart = t
 		}
 	}
 
 	// Parse transcript if cache miss.
 	if blockStart.IsZero() {
-		t, err := parseBlockStart(clean)
-		if err != nil {
-			return ""
+		t, parseErr := parseBlockStart(clean)
+		if parseErr != nil {
+			return time.Time{}, parseErr
 		}
 		blockStart = t
 		saveBlockCache(cachePath, &blockCache{
 			BlockStart:     blockStart.Format(time.RFC3339),
 			TranscriptPath: transcriptPath,
 		})
+	}
+
+	return blockStart, nil
+}
+
+func (blockTimerWidget) Render(si *input.StatusInput, item config.WidgetItem) string {
+	blockStart, err := getBlockStart(si)
+	if err != nil {
+		return ""
 	}
 
 	elapsed := time.Since(blockStart)
