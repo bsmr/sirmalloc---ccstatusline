@@ -47,6 +47,7 @@ type PowerlineConfig struct {
 	SeparatorInvertBackground []bool   `json:"separatorInvertBackground"`
 	StartCaps                 []string `json:"startCaps"`
 	EndCaps                   []string `json:"endCaps"`
+	Theme                     string   `json:"theme,omitempty"`
 	AutoAlign                 bool     `json:"autoAlign"`
 }
 

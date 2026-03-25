@@ -639,11 +639,11 @@ func (m model) updateGlobalOptions(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 // Powerline helpers
 // ---------------------------------------------------------------------------
 
-const powerlineFieldCount = 5
+const powerlineFieldCount = 6
 
 func isPowerlineFieldText(idx int) bool {
-	// 0=enabled(bool), 1=separator(text), 2=startCap(text), 3=endCap(text), 4=autoAlign(bool)
-	return idx >= 1 && idx <= 3
+	// 0=enabled(bool), 1=separator(text), 2=startCap(text), 3=endCap(text), 4=autoAlign(bool), 5=theme(text)
+	return (idx >= 1 && idx <= 3) || idx == 5
 }
 
 func getPowerlineField(s *config.Settings, idx int) string {
@@ -682,6 +682,8 @@ func getPowerlineField(s *config.Settings, idx int) string {
 			return "true"
 		}
 		return "false"
+	case 5:
+		return s.Powerline.Theme
 	}
 	return ""
 }
@@ -713,6 +715,8 @@ func setPowerlineField(s *config.Settings, idx int, val string) {
 		}
 	case 4:
 		s.Powerline.AutoAlign = val == "true"
+	case 5:
+		s.Powerline.Theme = val
 	}
 }
 
@@ -734,6 +738,7 @@ var powerlineFieldLabels = [powerlineFieldCount]string{
 	"startCap",
 	"endCap",
 	"autoAlign",
+	"theme",
 }
 
 // ---------------------------------------------------------------------------

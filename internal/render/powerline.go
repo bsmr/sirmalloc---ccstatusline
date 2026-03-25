@@ -34,7 +34,7 @@ func renderPowerline(segments []segment, pw *config.PowerlineConfig) string {
 
 	// Start cap: drawn in the foreground color of the first segment's BG.
 	if len(pw.StartCaps) > 0 && pw.StartCaps[0] != "" {
-		out = append(out, FG(segments[0].bg)...)
+		out = append(out, FG(BGColorToFG(segments[0].bg))...)
 		out = append(out, pw.StartCaps[0]...)
 	}
 
@@ -59,10 +59,10 @@ func renderPowerline(segments []segment, pw *config.PowerlineConfig) string {
 
 			out = append(out, Reset()...)
 			if invert {
-				out = append(out, FG(next.bg)...)
+				out = append(out, FG(BGColorToFG(next.bg))...)
 				out = append(out, BG(seg.bg)...)
 			} else {
-				out = append(out, FG(seg.bg)...)
+				out = append(out, FG(BGColorToFG(seg.bg))...)
 				out = append(out, BG(next.bg)...)
 			}
 			out = append(out, sep...)
@@ -74,7 +74,7 @@ func renderPowerline(segments []segment, pw *config.PowerlineConfig) string {
 	if len(pw.EndCaps) > 0 && pw.EndCaps[0] != "" {
 		last := segments[len(segments)-1]
 		out = append(out, Reset()...)
-		out = append(out, FG(last.bg)...)
+		out = append(out, FG(BGColorToFG(last.bg))...)
 		out = append(out, pw.EndCaps[0]...)
 	}
 

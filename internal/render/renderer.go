@@ -46,6 +46,8 @@ func renderLine(si *input.StatusInput, cfg *config.Settings, lineItems []config.
 	flexCount := 0
 	nonFlexCount := 0
 
+	isPowerline := cfg.Powerline != nil && cfg.Powerline.Enabled
+
 	for _, item := range lineItems {
 		w, ok := widgets.Get(item.Type)
 		if !ok {
@@ -63,7 +65,10 @@ func renderLine(si *input.StatusInput, cfg *config.Settings, lineItems []config.
 			continue
 		}
 
-		val = applyColors(val, item, cfg)
+		// In powerline mode keep the text clean; renderPowerline applies colors.
+		if !isPowerline {
+			val = applyColors(val, item, cfg)
+		}
 		slots = append(slots, widgetSlot{value: val, item: item})
 		totalVisible += VisibleLen(val)
 		nonFlexCount++
@@ -99,6 +104,11 @@ func renderLine(si *input.StatusInput, cfg *config.Settings, lineItems []config.
 		if len(segs) == 0 {
 			return ""
 		}
+		themeName := cfg.Powerline.Theme
+		if themeName == "" {
+			themeName = config.DefaultPowerlineTheme
+		}
+		segs = applyThemeToSegments(segs, themeName, cfg.ColorLevel)
 		return renderPowerline(segs, cfg.Powerline)
 	}
 
@@ -128,6 +138,26 @@ func slotsToSegments(slots []widgetSlot, cfg *config.Settings) []segment {
 		})
 	}
 	return segs
+}
+
+// applyThemeToSegments overrides each segment's fg/bg with colors from the named
+// powerline theme at the given color level. Returns segs unchanged when theme is
+// "" or "custom", or when the theme has no color definitions.
+func applyThemeToSegments(segs []segment, theme string, colorLevel int) []segment {
+	if theme == "" || theme == "custom" {
+		return segs
+	}
+	colors := config.GetThemeColors(theme, colorLevel)
+	if colors == nil || len(colors.FG) == 0 {
+		return segs
+	}
+	result := make([]segment, len(segs))
+	for i, s := range segs {
+		fg := colors.FG[i%len(colors.FG)]
+		bg := colors.BG[i%len(colors.BG)]
+		result[i] = segment{text: s.text, fg: fg, bg: bg, bold: s.bold}
+	}
+	return result
 }
 
 // applyColors wraps val with ANSI color/bold codes derived from item and global

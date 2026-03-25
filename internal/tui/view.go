@@ -240,6 +240,10 @@ func (m model) viewPowerline(b *strings.Builder) {
 		} else {
 			b.WriteString("  " + entry + "\n")
 		}
+		// Show available theme names as a hint directly below the theme field.
+		if label == "theme" {
+			b.WriteString(styleDim.Render("  (available: custom, nord, nord-aurora, monokai, solarized, minimal, dracula, catppuccin, gruvbox, onedark, tokyonight)") + "\n")
+		}
 	}
 }
 
