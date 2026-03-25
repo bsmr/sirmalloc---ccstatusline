@@ -12,7 +12,7 @@ func init() {
 type modelWidget struct{}
 
 func (modelWidget) Render(si *input.StatusInput, item config.WidgetItem) string {
-	if si.Model == nil {
+	if si == nil || si.Model == nil {
 		return ""
 	}
 	name := si.Model.DisplayName

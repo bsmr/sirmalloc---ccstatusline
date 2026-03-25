@@ -14,7 +14,7 @@ func init() {
 type sessionCostWidget struct{}
 
 func (sessionCostWidget) Render(si *input.StatusInput, _ config.WidgetItem) string {
-	if si.Cost == nil {
+	if si == nil || si.Cost == nil {
 		return ""
 	}
 	return fmt.Sprintf("$%.4f", si.Cost.TotalCostUSD)

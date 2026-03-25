@@ -13,7 +13,7 @@ func init() {
 type sessionClockWidget struct{}
 
 func (sessionClockWidget) Render(si *input.StatusInput, _ config.WidgetItem) string {
-	if si.Cost == nil {
+	if si == nil || si.Cost == nil {
 		return ""
 	}
 	return util.FormatDuration(si.Cost.TotalDurationMs)

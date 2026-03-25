@@ -2,11 +2,16 @@ package tui
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strconv"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"go.a8l.eu/ccstatusline/internal/config"
+	"go.a8l.eu/ccstatusline/internal/input"
+	"go.a8l.eu/ccstatusline/internal/render"
 )
 
 type screenKind int
@@ -18,6 +23,9 @@ const (
 	screenTypeSelect
 	screenGlobalOptions
 	screenPowerline
+	screenInstall
+	screenPreview
+	screenColorPicker
 )
 
 // allWidgetTypes lists all widget types available for addition.
@@ -184,6 +192,19 @@ func toggleBool(w *config.WidgetItem, idx int) {
 	}
 }
 
+// colorOptions maps cursor index to a display name and the ANSI/lipgloss color code.
+var colorOptions = []struct{ name, code string }{
+	{"black", "black"},
+	{"red", "red"},
+	{"green", "green"},
+	{"yellow", "yellow"},
+	{"blue", "blue"},
+	{"magenta", "magenta"},
+	{"cyan", "cyan"},
+	{"white", "white"},
+	{"default", ""},
+}
+
 type model struct {
 	settings   *config.Settings
 	configPath string
@@ -198,6 +219,16 @@ type model struct {
 	textBuf     string
 
 	statusMsg string
+
+	// Install screen
+	installStatus string
+
+	// Preview screen
+	previewLines []string
+
+	// Color picker screen
+	colorPickerTarget string // "fg" or "bg"
+	colorCursor       int
 }
 
 func newModel(s *config.Settings, path string) model {
@@ -225,6 +256,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateGlobalOptions(key)
 	case screenPowerline:
 		return m.updatePowerline(key)
+	case screenInstall:
+		return m.updateInstall(key)
+	case screenPreview:
+		return m.updatePreview(key)
+	case screenColorPicker:
+		return m.updateColorPicker(key)
 	}
 	return m, nil
 }
@@ -305,6 +342,12 @@ func (m model) updateLines(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "p":
 		m.screen = screenPowerline
 		m.fieldCursor = 0
+	case "v":
+		m.previewLines = m.renderPreview()
+		m.screen = screenPreview
+	case "i":
+		m.installStatus = ""
+		m.screen = screenInstall
 	case "ctrl+s":
 		m = m.save()
 	}
@@ -409,6 +452,13 @@ func (m model) updateWidget(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 			} else {
 				toggleBool(w, m.fieldCursor)
 			}
+		}
+	case "c":
+		if m.fieldCursor < len(fields) &&
+			(fields[m.fieldCursor].label == "fg" || fields[m.fieldCursor].label == "bg") {
+			m.colorPickerTarget = fields[m.fieldCursor].label
+			m.colorCursor = 0
+			m.screen = screenColorPicker
 		}
 	case "ctrl+s":
 		m = m.save()
@@ -663,6 +713,138 @@ var powerlineFieldLabels = [powerlineFieldCount]string{
 	"startCap",
 	"endCap",
 	"autoAlign",
+}
+
+// ---------------------------------------------------------------------------
+// Install helpers
+// ---------------------------------------------------------------------------
+
+// findCCStatuslineBinary attempts to locate the ccstatusline renderer binary.
+// It first checks the same directory as the running executable, then falls
+// back to PATH lookup.
+func findCCStatuslineBinary() string {
+	// 1. Same dir as current executable — replace "ccstatusline-setup" → "ccstatusline".
+	if exe, err := os.Executable(); err == nil {
+		candidate := filepath.Join(filepath.Dir(exe), "ccstatusline")
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+	// 2. PATH lookup.
+	if path, err := exec.LookPath("ccstatusline"); err == nil {
+		return path
+	}
+	return ""
+}
+
+func (m model) updateInstall(key tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch key.String() {
+	case "ctrl+c":
+		return m, tea.Quit
+	case "esc", "q":
+		m.screen = screenLines
+	case "i":
+		path := findCCStatuslineBinary()
+		if path == "" {
+			m.statusMsg = "ccstatusline binary not found — build first with: go build -o bin/ccstatusline ./cmd/ccstatusline"
+		} else if err := config.Install(path); err != nil {
+			m.statusMsg = "install error: " + err.Error()
+		} else {
+			m.statusMsg = "installed in Claude Code settings."
+		}
+	case "u":
+		if err := config.Uninstall(); err != nil {
+			m.statusMsg = "uninstall error: " + err.Error()
+		} else {
+			m.statusMsg = "uninstalled from Claude Code settings."
+		}
+	}
+	return m, nil
+}
+
+// ---------------------------------------------------------------------------
+// Preview helpers
+// ---------------------------------------------------------------------------
+
+// previewInput returns a synthetic StatusInput for the live preview.
+func previewInput() *input.StatusInput {
+	used := 42.0
+	remaining := 58.0
+	cost := 0.0123
+	dur := int64(150000)
+	return &input.StatusInput{
+		HookEventName: "Status",
+		Model: &input.ModelInfo{
+			ID:          "claude-opus-4-6[1m]",
+			DisplayName: "Opus 4.6 (1M context)",
+		},
+		Version: "2.1.80",
+		Cost: &input.CostInfo{
+			TotalCostUSD:    cost,
+			TotalDurationMs: dur,
+		},
+		ContextWindow: &input.ContextWindow{
+			TotalInputTokens:  420000,
+			TotalOutputTokens: 20000,
+			ContextWindowSize: 1000000,
+			UsedPercentage:    used,
+			RemainingPct:      remaining,
+		},
+	}
+}
+
+func (m model) renderPreview() []string {
+	si := previewInput()
+	return render.Render(si, m.settings, 220)
+}
+
+func (m model) updatePreview(key tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch key.String() {
+	case "ctrl+c":
+		return m, tea.Quit
+	case "esc", "q":
+		m.screen = screenLines
+	case "r":
+		m.previewLines = m.renderPreview()
+	}
+	return m, nil
+}
+
+// ---------------------------------------------------------------------------
+// Color picker helpers
+// ---------------------------------------------------------------------------
+
+func (m model) updateColorPicker(key tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch key.String() {
+	case "ctrl+c":
+		return m, tea.Quit
+	case "esc", "q":
+		m.screen = screenWidget
+	case "j", "down":
+		m.colorCursor++
+		if m.colorCursor >= len(colorOptions) {
+			m.colorCursor = 0
+		}
+	case "k", "up":
+		m.colorCursor--
+		if m.colorCursor < 0 {
+			m.colorCursor = len(colorOptions) - 1
+		}
+	case "enter":
+		w := m.currentWidget()
+		if w != nil {
+			fields := fieldsFor(w)
+			// Find the field index matching colorPickerTarget.
+			for i, f := range fields {
+				if f.label == m.colorPickerTarget {
+					setField(w, i, colorOptions[m.colorCursor].code)
+					break
+				}
+			}
+		}
+		m.screen = screenWidget
+	}
+	return m, nil
 }
 
 func (m model) updatePowerline(key tea.KeyMsg) (tea.Model, tea.Cmd) {

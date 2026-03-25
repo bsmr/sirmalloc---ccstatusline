@@ -14,7 +14,7 @@ func init() {
 type contextPctWidget struct{}
 
 func (contextPctWidget) Render(si *input.StatusInput, item config.WidgetItem) string {
-	if si.ContextWindow == nil {
+	if si == nil || si.ContextWindow == nil {
 		return ""
 	}
 	pct := si.ContextWindow.UsedPercentage

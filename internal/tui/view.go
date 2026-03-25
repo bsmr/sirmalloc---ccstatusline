@@ -8,6 +8,19 @@ import (
 	"go.a8l.eu/ccstatusline/internal/config"
 )
 
+// lipgloss color codes for the color picker (ANSI 0–7, empty = default/reset).
+var colorLipgloss = []lipgloss.Color{
+	lipgloss.Color("0"), // black
+	lipgloss.Color("1"), // red
+	lipgloss.Color("2"), // green
+	lipgloss.Color("3"), // yellow
+	lipgloss.Color("4"), // blue
+	lipgloss.Color("5"), // magenta
+	lipgloss.Color("6"), // cyan
+	lipgloss.Color("7"), // white
+	lipgloss.Color(""),  // default
+}
+
 var (
 	styleSelected = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("12"))
 	styleDim      = lipgloss.NewStyle().Faint(true)
@@ -29,6 +42,12 @@ func (m model) View() string {
 		m.viewGlobalOptions(&b)
 	case screenPowerline:
 		m.viewPowerline(&b)
+	case screenInstall:
+		m.viewInstall(&b)
+	case screenPreview:
+		m.viewPreview(&b)
+	case screenColorPicker:
+		m.viewColorPicker(&b)
 	}
 	b.WriteString("\n")
 	if m.statusMsg != "" {
@@ -43,14 +62,14 @@ func (m model) View() string {
 func (m model) hints() string {
 	switch m.screen {
 	case screenLines:
-		return "j/k navigate · Enter open · a add · d delete · g global opts · p powerline · Ctrl+S save · q quit"
+		return "j/k navigate · Enter open · a add · d delete · g global opts · p powerline · v preview · i install · Ctrl+S save · q quit"
 	case screenLine:
 		return "j/k navigate · Enter edit · a add · d delete · Ctrl+S save · Esc back"
 	case screenWidget:
 		if m.editingText {
 			return "type · Enter/Esc confirm"
 		}
-		return "j/k navigate · Enter/Space toggle · Ctrl+S save+back · Esc back"
+		return "j/k navigate · Enter/Space toggle · c color picker · Ctrl+S save+back · Esc back"
 	case screenTypeSelect:
 		return "j/k navigate · Enter select · Esc cancel"
 	case screenGlobalOptions:
@@ -63,6 +82,12 @@ func (m model) hints() string {
 			return "type · Enter/Esc confirm"
 		}
 		return "j/k navigate · Enter/Space toggle · Ctrl+S save+back · Esc/q back"
+	case screenInstall:
+		return "i install · u uninstall · Esc back"
+	case screenPreview:
+		return "r refresh · Esc back"
+	case screenColorPicker:
+		return "j/k navigate · Enter select · Esc cancel"
 	}
 	return ""
 }
@@ -214,6 +239,68 @@ func (m model) viewPowerline(b *strings.Builder) {
 			b.WriteString(styleSelected.Render("> "+entry) + "\n")
 		} else {
 			b.WriteString("  " + entry + "\n")
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Install screen
+// ---------------------------------------------------------------------------
+
+func (m model) viewInstall(b *strings.Builder) {
+	b.WriteString("Install / Uninstall\n\n")
+
+	installed, cmd, err := config.IsInstalled()
+	switch {
+	case err != nil:
+		b.WriteString(styleErr.Render("error checking status: "+err.Error()) + "\n")
+	case installed:
+		b.WriteString(fmt.Sprintf("Current status: %s  (%s)\n",
+			styleSelected.Render("installed"), cmd))
+	default:
+		b.WriteString("Current status: not installed\n")
+	}
+
+	b.WriteString("\n")
+	b.WriteString("  i  install in Claude Code settings\n")
+	b.WriteString("  u  uninstall from Claude Code settings\n")
+	b.WriteString("\n")
+	b.WriteString(styleDim.Render("Esc  back") + "\n")
+}
+
+// ---------------------------------------------------------------------------
+// Preview screen
+// ---------------------------------------------------------------------------
+
+func (m model) viewPreview(b *strings.Builder) {
+	b.WriteString("Preview  (r to refresh)\n\n")
+	if len(m.previewLines) == 0 {
+		b.WriteString(styleDim.Render("  (no output)") + "\n")
+		return
+	}
+	for _, line := range m.previewLines {
+		b.WriteString("  " + line + "\n")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Color picker screen
+// ---------------------------------------------------------------------------
+
+func (m model) viewColorPicker(b *strings.Builder) {
+	b.WriteString(fmt.Sprintf("Pick color for %s\n\n", m.colorPickerTarget))
+	for i, opt := range colorOptions {
+		var square string
+		if opt.code == "" {
+			square = styleDim.Render("█")
+		} else {
+			square = lipgloss.NewStyle().Foreground(colorLipgloss[i]).Render("█")
+		}
+		label := fmt.Sprintf("%s %s", square, opt.name)
+		if i == m.colorCursor {
+			b.WriteString(styleSelected.Render("> "+label) + "\n")
+		} else {
+			b.WriteString("  " + label + "\n")
 		}
 	}
 }
