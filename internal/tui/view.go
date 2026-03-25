@@ -1,0 +1,146 @@
+package tui
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+	"go.a8l.eu/ccstatusline/internal/config"
+)
+
+var (
+	styleSelected = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("12"))
+	styleDim      = lipgloss.NewStyle().Faint(true)
+	styleErr      = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
+)
+
+func (m model) View() string {
+	var b strings.Builder
+	switch m.screen {
+	case screenLines:
+		m.viewLines(&b)
+	case screenLine:
+		m.viewLine(&b)
+	case screenWidget:
+		m.viewWidget(&b)
+	case screenTypeSelect:
+		m.viewTypeSelect(&b)
+	}
+	b.WriteString("\n")
+	if m.statusMsg != "" {
+		b.WriteString(styleErr.Render(m.statusMsg))
+	} else {
+		b.WriteString(styleDim.Render(m.hints()))
+	}
+	b.WriteString("\n")
+	return b.String()
+}
+
+func (m model) hints() string {
+	switch m.screen {
+	case screenLines:
+		return "j/k navigate · Enter open · a add · d delete · Ctrl+S save · q quit"
+	case screenLine:
+		return "j/k navigate · Enter edit · a add · d delete · Ctrl+S save · Esc back"
+	case screenWidget:
+		if m.editingText {
+			return "type · Enter/Esc confirm"
+		}
+		return "j/k navigate · Enter/Space toggle · Ctrl+S save+back · Esc back"
+	case screenTypeSelect:
+		return "j/k navigate · Enter select · Esc cancel"
+	}
+	return ""
+}
+
+func (m model) viewLines(b *strings.Builder) {
+	b.WriteString("Lines\n\n")
+	for i, line := range m.settings.Lines {
+		label := fmt.Sprintf("Line %d  (%d widgets)", i+1, len(line))
+		if i == m.linesCursor {
+			b.WriteString(styleSelected.Render("> "+label) + "\n")
+		} else {
+			b.WriteString("  " + label + "\n")
+		}
+	}
+	if len(m.settings.Lines) == 0 {
+		b.WriteString(styleDim.Render("  (no lines — press 'a' to add one)") + "\n")
+	}
+}
+
+func (m model) viewLine(b *strings.Builder) {
+	b.WriteString(fmt.Sprintf("Line %d\n\n", m.linesCursor+1))
+	line := m.settings.Lines[m.linesCursor]
+	for i, w := range line {
+		summary := widgetSummary(w)
+		label := fmt.Sprintf("[%d] %-22s %s", i+1, w.Type, summary)
+		if i == m.widgetsCursor {
+			b.WriteString(styleSelected.Render("> "+label) + "\n")
+		} else {
+			b.WriteString("  " + label + "\n")
+		}
+	}
+	if len(line) == 0 {
+		b.WriteString(styleDim.Render("  (empty — press 'a' to add a widget)") + "\n")
+	}
+}
+
+func widgetSummary(w config.WidgetItem) string {
+	var parts []string
+	if w.FG != "" {
+		parts = append(parts, "fg="+w.FG)
+	}
+	if w.BG != "" {
+		parts = append(parts, "bg="+w.BG)
+	}
+	if w.Bold {
+		parts = append(parts, "bold")
+	}
+	switch w.Type {
+	case "separator":
+		sep := w.SepChar
+		if sep == "" {
+			sep = "|"
+		}
+		parts = append(parts, "sep="+sep)
+	case "context-percentage":
+		if w.Remaining {
+			parts = append(parts, "remaining")
+		}
+	}
+	return strings.Join(parts, " ")
+}
+
+func (m model) viewWidget(b *strings.Builder) {
+	w := m.currentWidget()
+	if w == nil {
+		return
+	}
+	fields := fieldsFor(w)
+	b.WriteString(fmt.Sprintf("Widget: %s\n\n", w.Type))
+	for i, f := range fields {
+		val := getField(w, i)
+		var label string
+		if i == m.fieldCursor && m.editingText {
+			label = fmt.Sprintf("%-14s  %s_", f.label, m.textBuf)
+		} else {
+			label = fmt.Sprintf("%-14s  %s", f.label, val)
+		}
+		if i == m.fieldCursor {
+			b.WriteString(styleSelected.Render("> "+label) + "\n")
+		} else {
+			b.WriteString("  " + label + "\n")
+		}
+	}
+}
+
+func (m model) viewTypeSelect(b *strings.Builder) {
+	b.WriteString("Add widget — select type\n\n")
+	for i, t := range phase1Types {
+		if i == m.typeCursor {
+			b.WriteString(styleSelected.Render("> "+t) + "\n")
+		} else {
+			b.WriteString("  " + t + "\n")
+		}
+	}
+}

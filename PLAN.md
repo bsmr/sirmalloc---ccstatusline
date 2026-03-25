@@ -1,50 +1,70 @@
 # Development Plan — ccstatusline Go Port
 
-## Phase 1: Minimal Piped Mode (renderer, Priority: HIGH)
+## Phase 1: Minimal Piped Mode (renderer) ✅ DONE
 
 1. `cmd/ccstatusline/main.go` — isatty check, `main() → run()` pattern, stdin read with size limit
 2. `internal/input/parse.go` — JSON decode → `StatusInput`
 3. `internal/render/ansi.go` — basic color codes
-4. First widgets: `model`, `contextPct`, `sessionClock`
+4. First widgets: `model`, `context-percentage`, `session-clock`, `session-cost`, `separator`, `flex-separator`
 5. `internal/render/renderer.go` — assemble widgets, write to stdout
-6. Smoke test: `cat testdata/example_input.json | go run ./cmd/ccstatusline`
+6. `internal/config/settings.go` — `Settings`/`WidgetItem` structs, `Load()`/`Save()` (atomic)
+7. Smoke test: `cat testdata/example_input.json | go run ./cmd/ccstatusline`
 
-## Phase 2: All Widgets
+## Phase 1.5: TUI Skeleton — view & edit existing widgets
 
-7. All widgets from the table in `docs/spec.md`
-8. Git widgets with `os/exec`, 2s timeout, `Cmd.Dir` validation (see `docs/security.md` R-7)
-9. Block timer with JSONL parsing and cache
-10. Custom command with stdin forwarding (no `sh -c` — see `docs/security.md` R-1)
-11. Rate limits widgets (`rateLimitFiveHour`, `rateLimitSevenDay`)
-12. Vim mode widget
+Goal: after this phase `ccstatusline-setup` shows the current config and allows
+editing all Phase-1 widgets. No new renderer features.
 
-## Phase 3: Settings & Powerline
+8. Add Bubble Tea + Lip Gloss to `go.mod` (`cmd/ccstatusline-setup` only)
+9. Main screen: list of lines ([][]WidgetItem), navigate with j/k
+10. Line screen: list of widgets in the selected line, navigate with j/k
+11. Widget screen: edit color/fg/bg/bold for the selected widget
+12. Widget-type-specific options for Phase-1 widgets:
+    - `separator`: SepChar
+    - `context-percentage`: Remaining toggle
+13. Add widget (type selection list), remove widget (d), reorder (not required yet)
+14. Save with Ctrl+S (atomic write via `config.Save()`)
+15. Quit with q/Esc from top level
 
-13. Settings file read/write with atomic writes (see `docs/security.md` R-4)
-14. Powerline rendering, separators, caps
-15. Flex separator, auto-alignment
-16. Terminal width modes
-17. ANSI/OSC-aware truncation
+## Phase 2: All Widgets (renderer + TUI editor page per widget)
 
-## Phase 4: TUI (ccstatusline-setup binary, Priority: MEDIUM)
+For each new widget: implement renderer side AND TUI config page in the same step.
 
-18. Separate `cmd/ccstatusline-setup` entry point
-19. Bubble Tea skeleton
-20. Main menu, Line selector
-21. Items editor with widget selection
-22. Widget editor with color/option configuration
-23. Color menu (Basic / 256 / Truecolor)
-24. Powerline setup screen
-25. Global options screen
-26. Live preview
-27. Install/Uninstall in Claude Code settings
+16. `git-branch` — `os/exec`, 2s timeout, `Cmd.Dir` validation (R-7)
+17. `git-worktree` — same exec pattern
+18. `cwd` — path display, fish-style, segments
+19. `version` — static from `StatusInput`
+20. `output-style` — pass-through
+21. `tokens-in`, `tokens-out`, `tokens-total` — from `StatusInput`
+22. `context-length` — from `StatusInput.Model`
+23. `context-pct-usable` — derived from tokens + model limit
+24. `rate-limit-five-hour`, `rate-limit-seven-day` — from `StatusInput.RateLimits`
+25. `vim-mode` — from `StatusInput.Vim`
+26. `terminal-width` — from termWidth parameter
+27. `custom-text` — static, `item.Text`
+28. `custom-command` — `exec.Command(path, args...)`, no `sh -c` (R-1), timeout
+29. `block-timer` — JSONL parsing, cache in `~/.cache/ccstatusline/`
+
+## Phase 3: Settings & Powerline (renderer + TUI screens)
+
+30. Powerline rendering, separators, caps (renderer)
+31. Flex separator, auto-alignment (renderer)
+32. Terminal width modes and ANSI/OSC-aware truncation (renderer)
+33. TUI: Powerline setup screen
+34. TUI: Global options screen (flexMode, colorLevel, compactThreshold, globalBold)
+
+## Phase 4: TUI Polish & Integration
+
+35. Live preview (render current config with last known input)
+36. Install/Uninstall in Claude Code settings (`~/.claude/settings.json`)
+37. Color picker: Basic / 256 / Truecolor selection
 
 ## Phase 5: Polish
 
-28. Windows compatibility (paths, code page)
-29. Full test coverage
-30. README
-31. Goreleaser for automated releases
+38. Windows compatibility (paths, code page)
+39. Full test coverage
+40. README
+41. Goreleaser for automated releases
 
 ## Quality Criteria
 
