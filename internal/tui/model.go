@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -17,12 +18,31 @@ const (
 	screenTypeSelect
 )
 
-// phase1Types lists widget types available for addition in Phase 1.5.
-var phase1Types = []string{
+// allWidgetTypes lists all widget types available for addition.
+var allWidgetTypes = []string{
 	"model",
 	"context-percentage",
+	"context-pct-usable",
+	"context-length",
 	"session-clock",
 	"session-cost",
+	"block-timer",
+	"git-branch",
+	"git-changes",
+	"git-worktree",
+	"cwd",
+	"version",
+	"output-style",
+	"tokens-input",
+	"tokens-output",
+	"tokens-cached",
+	"tokens-total",
+	"rate-limit-five-hour",
+	"rate-limit-seven-day",
+	"vim-mode",
+	"terminal-width",
+	"custom-text",
+	"custom-command",
 	"separator",
 	"flex-separator",
 }
@@ -43,6 +63,18 @@ func fieldsFor(w *config.WidgetItem) []widgetField {
 		fields = append(fields, widgetField{"sepChar", true})
 	case "context-percentage":
 		fields = append(fields, widgetField{"remaining", false})
+	case "cwd":
+		fields = append(fields, widgetField{"segments", true})
+		fields = append(fields, widgetField{"fishStyle", false})
+	case "custom-text":
+		fields = append(fields, widgetField{"text", true})
+	case "custom-command":
+		fields = append(fields, widgetField{"command", true})
+		fields = append(fields, widgetField{"timeout", true})
+	case "git-branch", "git-changes", "git-worktree":
+		fields = append(fields, widgetField{"hideNoGit", false})
+	case "block-timer":
+		fields = append(fields, widgetField{"barMode", true})
 	}
 	return fields
 }
@@ -72,6 +104,26 @@ func getField(w *config.WidgetItem, idx int) string {
 			return "true"
 		}
 		return "false"
+	case "segments":
+		return strconv.Itoa(w.Segments)
+	case "fishStyle":
+		if w.FishStyle {
+			return "true"
+		}
+		return "false"
+	case "hideNoGit":
+		if w.HideNoGit {
+			return "true"
+		}
+		return "false"
+	case "text":
+		return w.Text
+	case "command":
+		return w.Command
+	case "timeout":
+		return strconv.Itoa(w.Timeout)
+	case "barMode":
+		return w.BarMode
 	}
 	return ""
 }
@@ -92,6 +144,24 @@ func setField(w *config.WidgetItem, idx int, val string) {
 		w.SepChar = val
 	case "remaining":
 		w.Remaining = val == "true"
+	case "segments":
+		if n, err := strconv.Atoi(val); err == nil {
+			w.Segments = n
+		}
+	case "fishStyle":
+		w.FishStyle = val == "true"
+	case "hideNoGit":
+		w.HideNoGit = val == "true"
+	case "text":
+		w.Text = val
+	case "command":
+		w.Command = val
+	case "timeout":
+		if n, err := strconv.Atoi(val); err == nil {
+			w.Timeout = n
+		}
+	case "barMode":
+		w.BarMode = val
 	}
 }
 
@@ -105,6 +175,10 @@ func toggleBool(w *config.WidgetItem, idx int) {
 		w.Bold = !w.Bold
 	case "remaining":
 		w.Remaining = !w.Remaining
+	case "fishStyle":
+		w.FishStyle = !w.FishStyle
+	case "hideNoGit":
+		w.HideNoGit = !w.HideNoGit
 	}
 }
 
@@ -339,16 +413,16 @@ func (m model) updateTypeSelect(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.screen = screenLine
 	case "j", "down":
 		m.typeCursor++
-		if m.typeCursor >= len(phase1Types) {
+		if m.typeCursor >= len(allWidgetTypes) {
 			m.typeCursor = 0
 		}
 	case "k", "up":
 		m.typeCursor--
 		if m.typeCursor < 0 {
-			m.typeCursor = len(phase1Types) - 1
+			m.typeCursor = len(allWidgetTypes) - 1
 		}
 	case "enter":
-		t := phase1Types[m.typeCursor]
+		t := allWidgetTypes[m.typeCursor]
 		id := fmt.Sprintf("%d", time.Now().UnixNano())
 		w := config.WidgetItem{ID: id, Type: t}
 		m.settings.Lines[m.linesCursor] = append(

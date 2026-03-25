@@ -107,6 +107,29 @@ func widgetSummary(w config.WidgetItem) string {
 		if w.Remaining {
 			parts = append(parts, "remaining")
 		}
+	case "cwd":
+		if w.Segments > 0 {
+			parts = append(parts, fmt.Sprintf("segments=%d", w.Segments))
+		}
+		if w.FishStyle {
+			parts = append(parts, "fishStyle")
+		}
+	case "custom-text":
+		if w.Text != "" {
+			parts = append(parts, "text="+w.Text)
+		}
+	case "custom-command":
+		if w.Command != "" {
+			parts = append(parts, "cmd="+w.Command)
+		}
+	case "git-branch", "git-changes", "git-worktree":
+		if w.HideNoGit {
+			parts = append(parts, "hideNoGit")
+		}
+	case "block-timer":
+		if w.BarMode != "" {
+			parts = append(parts, "barMode="+w.BarMode)
+		}
 	}
 	return strings.Join(parts, " ")
 }
@@ -136,7 +159,7 @@ func (m model) viewWidget(b *strings.Builder) {
 
 func (m model) viewTypeSelect(b *strings.Builder) {
 	b.WriteString("Add widget — select type\n\n")
-	for i, t := range phase1Types {
+	for i, t := range allWidgetTypes {
 		if i == m.typeCursor {
 			b.WriteString(styleSelected.Render("> "+t) + "\n")
 		} else {
