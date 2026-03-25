@@ -36,6 +36,9 @@ var allRegisteredTypes = []string{
 	"version",
 	"git-worktree",
 	"git-changes",
+	"context-bar",
+	"reset-timer",
+	"session-usage",
 }
 
 func TestNilSafetyAllWidgets(t *testing.T) {

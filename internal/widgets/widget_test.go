@@ -63,6 +63,9 @@ func TestExpectedWidgetTypesAreRegistered(t *testing.T) {
 		"version",
 		"git-worktree",
 		"git-changes",
+		"context-bar",
+		"reset-timer",
+		"session-usage",
 	}
 	for _, typ := range expected {
 		t.Run(typ, func(t *testing.T) {
