@@ -2,6 +2,8 @@
 
 A customizable status line renderer for the Claude Code CLI.
 
+![Demo](screenshots/demo.gif)
+
 ## Overview
 
 ccstatusline replaces the built-in Claude Code status line with a configurable bar
@@ -65,6 +67,49 @@ Run `ccstatusline-setup` to open the interactive TUI editor. Settings are stored
 `~/.config/ccstatusline/settings.json` and are JSON-compatible with the TypeScript
 original (settings version 3).
 
+### Global options
+
+| Option | Values | Description |
+|--------|--------|-------------|
+| `flexMode` | `full`, `full-minus-40`, `full-until-compact` | How terminal width is calculated |
+| `colorLevel` | `0` (basic), `1` (256-color), `2` (truecolor) | ANSI color depth |
+| `compactThreshold` | integer (%) | Context % at which `full-until-compact` halves the width |
+| `globalBold` | bool | Apply bold to all widgets |
+
+### Powerline
+
+Enable Powerline mode in `ccstatusline-setup` (press `p`). Segments are rendered with
+arrow separators and background-color transitions.
+
+| Option | Description |
+|--------|-------------|
+| `enabled` | Turn Powerline mode on/off |
+| `separator` | Separator glyph (default: `` — requires a Nerd Font) |
+| `startCap` / `endCap` | Optional leading/trailing caps |
+| `autoAlign` | Pad segments for uniform visual weight |
+| `theme` | Color theme name (see below) |
+
+#### Built-in themes
+
+| Theme | Description |
+|-------|-------------|
+| `nord` | Arctic, north-bluish color palette |
+| `nord-aurora` | Nord with aurora borealis accent colors (default) |
+| `monokai` | Dark background with vibrant accent colors |
+| `solarized` | Precision colors for machine-readable readability |
+| `minimal` | Clean monochrome light/dark |
+| `dracula` | Dark background with purple accents |
+| `catppuccin` | Soothing pastel theme |
+| `gruvbox` | Retro groove color scheme |
+| `onedark` | Atom-inspired dark theme |
+| `tokyonight` | Clean dark theme inspired by Tokyo nightlife |
+| `custom` | Uses per-widget `bg`/`fg` colors from config |
+
+Each theme provides three color levels (basic / 256-color / truecolor) selected
+automatically via `colorLevel`.
+
+![Powerline autoAlign](screenshots/autoAlign.png)
+
 ### TUI keyboard shortcuts
 
 | Key | Action |
@@ -102,8 +147,11 @@ original (settings version 3).
 | `context-length` | Context window size |
 | `context-percentage` | Context window usage percentage (toggle: used / remaining) |
 | `context-pct-usable` | Percentage relative to auto-compact boundary (80% of max) |
+| `context-bar` | Visual progress bar of context usage (`metadata.display`: `progress` = 32 chars, `progress-short` = 16 chars) |
 | `rate-limit-five-hour` | 5-hour rate limit used percentage |
 | `rate-limit-seven-day` | 7-day rate limit used percentage |
+| `session-usage` | 5-hour rate limit as a visual progress bar (`metadata.display`: `progress` / `progress-short`) |
+| `reset-timer` | Remaining time until the current 5-hour block resets |
 | `vim-mode` | Vim mode indicator (only shown when active) |
 | `terminal-width` | Current terminal width (debugging) |
 | `custom-text` | Static text from config (emoji supported) |
@@ -137,6 +185,14 @@ Stdin is wrapped with a 1 MiB size limit before decoding.
 
 See [docs/security.md](docs/security.md) for the full list of security rules and
 their implementation.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Block timer](screenshots/blockTimer.png) | ![CWD and session cost](screenshots/cwdAndSessionCost.png) |
+| ![Context usage](screenshots/ccusage.png) | ![Global options](screenshots/global.png) |
+| ![Emoji support](screenshots/emojiSupport.png) | ![Block timer small](screenshots/blockTimerSmall.png) |
 
 ## Development
 
